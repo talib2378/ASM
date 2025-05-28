@@ -1,0 +1,106 @@
+
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>اپنا سوشل میڈیا کا اپنا موسم</title>
+  <style>
+    body {
+      font-family: 'Noto Nastaliq Urdu', serif;
+      background-color: #87ceeb;
+      color: black;
+      padding: 20px;
+      direction: rtl;
+      text-align: right;
+    }
+    select, .weather-box {
+      margin: 10px 0;
+      padding: 10px;
+      font-size: 16px;
+    }
+    .weather-box {
+      background: #e0f7fa;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <h1>اپنا سوشل میڈیا کا اپنا موسم</h1>
+
+  <label for="district">ضلع منتخب کریں:</label>
+  <select id="district" onchange="loadTehsils()"></select>
+
+  <label for="tehsil">تحصیل منتخب کریں:</label>
+  <select id="tehsil" onchange="getWeather()"></select>
+
+  <div class="weather-box" id="weather-box">
+    <h3>موسم کی صورتحال:</h3>
+    <p>براہ کرم ضلع اور تحصیل منتخب کریں۔</p>
+  </div>
+
+  <script>
+    const apiKey = "2cce61fc49761567211f3e590c66a633";
+    let locations = {};
+
+    fetch('punjab-tehsil-coordinates.json')
+      .then(response => response.json())
+      .then(data => {
+        locations = data;
+        const districtSelect = document.getElementById('district');
+        Object.keys(locations).forEach(district => {
+          const opt = document.createElement('option');
+          opt.value = district;
+          opt.text = district;
+          districtSelect.appendChild(opt);
+        });
+        loadTehsils();
+      });
+
+    function loadTehsils() {
+      const district = document.getElementById('district').value;
+      const tehsilSelect = document.getElementById('tehsil');
+      tehsilSelect.innerHTML = '';
+      const tehsils = locations[district].tehsils;
+      Object.keys(tehsils).forEach(tehsil => {
+        const opt = document.createElement('option');
+        opt.value = tehsil;
+        opt.text = tehsil;
+        tehsilSelect.appendChild(opt);
+      });
+      getWeather();
+    }
+
+    function getWeather() {
+      const district = document.getElementById('district').value;
+      const tehsil = document.getElementById('tehsil').value;
+      const coords = locations[district].tehsils[tehsil];
+
+      const weatherBox = document.getElementById('weather-box');
+      weatherBox.innerHTML = "<p>ڈیٹا لوڈ ہو رہا ہے...</p>";
+
+      fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${coords[0]}&lon=${coords[1]}&units=metric&lang=ur&appid=${apiKey}`)
+        .then(response => response.json())
+        .then(data => {
+          const current = data.list[0];
+          const html = `
+            <h3>${district} - ${tehsil}</h3>
+            <p>درجہ حرارت: ${current.main.temp}°C</p>
+            <p>ہوا: ${current.wind.speed} کلومیٹر فی گھنٹہ</p>
+            <p>نمی: ${current.main.humidity}%</p>
+            <p>موسم: ${current.weather[0].description}</p>
+            <h4>اگلے 24 گھنٹے:</h4>
+            <ul>${data.list.slice(0, 8).map(item => `
+              <li>${new Date(item.dt_txt).toLocaleTimeString('ur-PK', { hour: '2-digit', minute: '2-digit' })}: ${item.main.temp}°C, ${item.weather[0].description}</li>
+            `).join('')}</ul>
+          `;
+          weatherBox.innerHTML = html;
+        })
+        .catch(() => {
+          weatherBox.innerHTML = "<p>موسم کی معلومات حاصل کرنے میں مسئلہ پیش آیا۔</p>";
+        });
+    }
+  </script>
+</body>
+</html>
